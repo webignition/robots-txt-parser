@@ -13,12 +13,16 @@
     ],
     "require": {
         "php": ">=5.3.0",
-        "webignition/disallowed-character-terminated-string": "*"           
+        "webignition/robots-txt-file": "*"           
     },
     "repositories": [
         {
             "type":"vcs",
             "url": "https://github.com/webignition/disallowed-character-terminated-string"
-        }       
+        },       
+        {
+            "type":"vcs",
+            "url": "https://github.com/webignition/robots-txt-file"
+        }        
     ]    
 }
