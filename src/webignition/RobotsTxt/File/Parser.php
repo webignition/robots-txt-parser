@@ -50,15 +50,6 @@ class Parser {
      */
     private $sourceLineIndex = 0;
     
-    
-    /**
-     * URL of source robots.txt file. Required for correctly parsing relative
-     * URLs.
-     * 
-     * @var string
-     */
-    private $sourceUrl = null;
-    
     /**
      *
      * @var \webignition\RobotsTxt\File\File
@@ -94,15 +85,6 @@ class Parser {
      */
     public function setSource($source) {
         $this->source = $source;
-    }
-    
-    
-    /**
-     *
-     * @param string $sourceUrl 
-     */
-    public function setSourceUrl($sourceUrl) {
-        $this->sourceUrl = $sourceUrl;
     }
     
     
