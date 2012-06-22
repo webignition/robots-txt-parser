@@ -9,7 +9,6 @@ class ParserTest extends PHPUnit_Framework_TestCase {
                 
         $parser = new \webignition\RobotsTxt\File\Parser();
         $parser->setSource(file_get_contents($dataPath));
-        $parser->setSourceUrl('http://stackoverflow.com/');
         
         $file = $parser->getFile();
         
