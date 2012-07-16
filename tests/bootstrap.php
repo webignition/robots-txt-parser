@@ -19,3 +19,5 @@ function autoload( $rootDir ) {
 
 autoload( '/usr/share/php' );
 autoload( __DIR__ . '/');
+autoload( __DIR__ . '/DirectiveFactory');
+autoload( __DIR__ . '/Parser');
