@@ -1,6 +1,8 @@
 <?php
 namespace webignition\RobotsTxt\File;
 
+
+
 class Parser {
     
     /**
@@ -19,7 +21,8 @@ class Parser {
     const STARTING_STATE = self::STATE_UNKNOWN;
     
     const USER_AGENT_FIELD_NAME = 'user-agent';
-    const COMMENT_START_CHARACTER = '#';
+    const SITEMAP_DIRECTIVE_FIELD_MAME = 'sitemap';
+    const COMMENT_START_CHARACTER = '#';    
     
     /**
      * Unmodified source of given robots.txt file
@@ -66,6 +69,14 @@ class Parser {
     
     
     /**
+     * Previous state of the parser
+     * 
+     * @var int
+     */
+    private $previousState = self::STARTING_STATE;
+    
+    
+    /**
      *
      * @var \webignition\RobotTxt\Record\Record
      */
@@ -77,6 +88,14 @@ class Parser {
      * @var \webignition\RobotsTxt\Directive\Factory
      */
     private $directiveFactory = null;
+    
+    /**
+     *
+     * @var array
+     */
+    private $recordlessDirectiveFieldNames = array(
+        self::SITEMAP_DIRECTIVE_FIELD_MAME => true
+    );
     
     
     /**
@@ -118,30 +137,42 @@ class Parser {
         $this->sourceLines = explode("\n", trim($this->source));
         $this->sourceLineCount = count($this->sourceLines);
         
-        while ($this->sourceLineIndex < $this->sourceLineCount) {
+        while ($this->sourceLineIndex < $this->sourceLineCount) {            
             $this->parseCurrentLine();
+        } 
+        
+        if ($this->hasCurrentRecord()) {
+            $this->file->addRecord($this->currentRecord);
         }
     }
     
-    private function parseCurrentLine() {
+    private function parseCurrentLine() {        
         switch ($this->currentState) {
             case self::STATE_UNKNOWN:
                 $this->deriveStateFromCurrentLine();
+                $this->previousState = self::STATE_UNKNOWN;
                 break;
             
             case self::STATE_STARTING_RECORD:
                 $this->currentRecord = new \webignition\RobotsTxt\Record\Record();
-                $this->currentState = self::STATE_ADDING_TO_RECORD;
+                $this->currentState = self::STATE_ADDING_TO_RECORD;                
+                $this->previousState = self::STATE_STARTING_RECORD;
                 break;
 
             case self::STATE_ADDING_TO_RECORD:
+                if ($this->isCurrentLineARecordlessDirective()) {
+                    $this->currentState = self::STATE_ADDING_TO_FILE;
+                    $this->previousState = self::STATE_ADDING_TO_RECORD;
+                    return;
+                }
+                
                 if ($this->isCurrentLineADirective()) {
                     $directive = $this->directiveFactory()->getDirective($this->getCurrentLine());
                     if ($directive->is(self::USER_AGENT_FIELD_NAME)) {
                         $this->currentRecord->userAgentDirectiveList()->add($directive->getValue());
                     } else {
                         $this->currentRecord->directiveList()->add($this->getCurrentLine());
-                    }                                        
+                    }                                       
                 } else {
                     if ($this->isCurrentLineBlank()) {
                         $this->file->addRecord($this->currentRecord);
@@ -155,16 +186,15 @@ class Parser {
 
                 break;
 
-            case self::STATE_ADDING_TO_FILE:                
+            case self::STATE_ADDING_TO_FILE:                 
                 $this->file->directiveList()->add($this->getCurrentLine());
-                $this->currentState = self::STATE_UNKNOWN;
+                $this->currentState = ($this->previousState == self::STATE_ADDING_TO_RECORD) ? self::STATE_ADDING_TO_RECORD : self::STATE_UNKNOWN;
+                $this->previousState = self::STATE_ADDING_TO_FILE;
                 $this->sourceLineIndex++;               
                 
                 break;
 
             default:
-                //var_dump('uknown state '.$this->getCurrentLine());
-                //exit();
         }
     }
     
@@ -175,6 +205,25 @@ class Parser {
     private function getCurrentLine() {
         return isset($this->sourceLines[$this->sourceLineIndex]) ? trim($this->sourceLines[$this->sourceLineIndex]) : '';
     }
+    
+    
+    /**
+     *
+     * @return boolean
+     */
+    private function isCurrentLineLastLine() {
+        return $this->sourceLineIndex == $this->sourceLineCount - 1;
+    }
+    
+    
+    /**
+     *
+     * @return boolean
+     */
+    private function hasCurrentRecord() {
+        return !is_null($this->currentRecord);
+    }
+    
     
     /**
      *
@@ -208,7 +257,22 @@ class Parser {
         return true;
     }
     
-    private function deriveStateFromCurrentLine() {
+    
+    /**
+     *
+     * @return boolean
+     */
+    private function isCurrentLineARecordlessDirective() {
+        if (!$this->isCurrentLineADirective()) {
+            return false;
+        }
+        
+        $directive = $this->directiveFactory()->getDirective($this->getCurrentLine());
+        return array_key_exists($directive->getField(), $this->recordlessDirectiveFieldNames);
+    }
+    
+    
+    private function deriveStateFromCurrentLine() {       
         if (!$this->isCurrentLineADirective()) {
             $this->sourceLineIndex++;
             return $this->currentState = self::STATE_UNKNOWN;
