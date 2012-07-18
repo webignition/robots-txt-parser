@@ -16,7 +16,7 @@ Usage
 ```php
 <?php
 $parser = new \webignition\RobotsTxt\File\Parser();
-$parser->setSource(file_get_contents('http://webignition.net/robots.txt));
+$parser->setSource(file_get_contents('http://webignition.net/robots.txt'));
 
 $file = $parser->getFile();
 
