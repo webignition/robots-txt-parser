@@ -16,7 +16,6 @@
     },
     "require": {
         "php": ">=5.3.0",
-        "webignition/robots-txt-file": "dev-master",
-        "webignition/disallowed-character-terminated-string": "1.0"  
+        "webignition/robots-txt-file": "dev-master"
     }  
 }
