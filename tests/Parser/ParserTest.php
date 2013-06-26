@@ -71,4 +71,20 @@ class ParserTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals(1, count($file->directiveList()->filter(array('field' => 'sitemap'))->getValues()));        
     }
     
+    public function testParsingWithStartingBOM() {
+        $dataPath = __DIR__ . '/../data/withBom.txt';
+                
+        $parser = new \webignition\RobotsTxt\File\Parser();
+        $parser->setSource(file_get_contents($dataPath));
+        
+        $file = $parser->getFile();
+   
+        $this->assertEquals(1, count($file->getRecords()));
+        $this->assertEquals(2, count($file->getDirectivesFor('*')->getValues()));
+        $this->assertEquals(array(
+            'disallow:/',
+            'allow:/humans.txt'
+        ), $file->getDirectivesFor('*')->getValues());       
+    }    
+    
 }

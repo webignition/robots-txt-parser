@@ -1,18 +1,7 @@
 <?php
 namespace webignition\RobotsTxt\File;
 
-
-
-class Parser {
-    
-    /**
-     * States:
-     * 
-     * adding to record
-     * unknown
-     * adding to file
-     *  
-     */
+class Parser {    
     
     const STATE_UNKNOWN = 0;
     const STATE_ADDING_TO_RECORD = 1;
@@ -23,6 +12,8 @@ class Parser {
     const USER_AGENT_FIELD_NAME = 'user-agent';
     const SITEMAP_DIRECTIVE_FIELD_MAME = 'sitemap';
     const COMMENT_START_CHARACTER = '#';    
+    
+    const UTF8_BOM = "\xef\xbb\xbf";
     
     /**
      * Unmodified source of given robots.txt file
@@ -103,7 +94,23 @@ class Parser {
      * @param string $source 
      */
     public function setSource($source) {
-        $this->source = $source;
+        $this->source = $this->prepareSource($source);
+    }
+
+    
+    /**
+     * 
+     * @param string $source
+     * @return string
+     */
+    private function prepareSource($source) {
+        $source = trim($source);
+        
+        if (substr($source, 0, strlen(self::UTF8_BOM)) == self::UTF8_BOM) {
+            $source = substr($source, strlen(self::UTF8_BOM));
+        }
+        
+        return $source;
     }
     
     
@@ -133,6 +140,18 @@ class Parser {
     }
     
     private function parse() {
+//        var_dump("\xef\xbb\xbf");
+//        exit();
+//        
+//        for ($i = 0; $i < 10; $i++) {
+//            var_dump($this->source[$i], ord($this->source[$i]));
+//        }
+//        
+//        exit();
+//        
+//        var_dump($this->source);
+//        exit();
+        
         $this->currentState = self::STARTING_STATE;
         $this->sourceLines = explode("\n", trim($this->source));
         $this->sourceLineCount = count($this->sourceLines);
@@ -147,6 +166,8 @@ class Parser {
     }
     
     private function parseCurrentLine() {        
+        //var_dump($this->getCurrentLine());
+        
         switch ($this->currentState) {
             case self::STATE_UNKNOWN:
                 $this->deriveStateFromCurrentLine();
