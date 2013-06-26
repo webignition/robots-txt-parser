@@ -139,19 +139,7 @@ class Parser {
         return $this->directiveFactory;
     }
     
-    private function parse() {
-//        var_dump("\xef\xbb\xbf");
-//        exit();
-//        
-//        for ($i = 0; $i < 10; $i++) {
-//            var_dump($this->source[$i], ord($this->source[$i]));
-//        }
-//        
-//        exit();
-//        
-//        var_dump($this->source);
-//        exit();
-        
+    private function parse() {        
         $this->currentState = self::STARTING_STATE;
         $this->sourceLines = explode("\n", trim($this->source));
         $this->sourceLineCount = count($this->sourceLines);
@@ -165,9 +153,7 @@ class Parser {
         }
     }
     
-    private function parseCurrentLine() {        
-        //var_dump($this->getCurrentLine());
-        
+    private function parseCurrentLine() {                
         switch ($this->currentState) {
             case self::STATE_UNKNOWN:
                 $this->deriveStateFromCurrentLine();
