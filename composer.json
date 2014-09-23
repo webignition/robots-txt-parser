@@ -16,6 +16,11 @@
     },
     "require": {
         "php": ">=5.3.0",
-        "webignition/robots-txt-file": "dev-master"
-    }  
+        "webignition/robots-txt-file": ">=0.1,<1.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "~4.0"
+    },
+    "minimum-stability":"stable",
+    "prefer-stable":true
 }
