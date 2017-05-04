@@ -1,85 +1,85 @@
 <?php
 namespace webignition\RobotsTxt\File;
 
-class Parser {    
-    
+use webignition\RobotsTxt\Directive\Directive as RobotsTxtDirective;
+use webignition\RobotsTxt\Directive\Factory as DirectiveFactory;
+use webignition\RobotsTxt\File\File as RobotsTxtFile;
+use webignition\RobotsTxt\Record\Record as RobotsTxtRecord;
+
+class Parser
+{
     const STATE_UNKNOWN = 0;
     const STATE_ADDING_TO_RECORD = 1;
     const STATE_ADDING_TO_FILE = 2;
     const STATE_STARTING_RECORD = 3;
     const STARTING_STATE = self::STATE_UNKNOWN;
-    
+
     const USER_AGENT_FIELD_NAME = 'user-agent';
     const SITEMAP_DIRECTIVE_FIELD_MAME = 'sitemap';
-    const COMMENT_START_CHARACTER = '#';    
-    
+    const COMMENT_START_CHARACTER = '#';
+
     const UTF8_BOM = "\xef\xbb\xbf";
-    
+
     /**
      * Unmodified source of given robots.txt file
-     * 
+     *
      * @var string
      */
     private $source = null;
-    
+
     /**
      * Lines from source
-     *  
+     *
      * @var array
      */
     private $sourceLines = array();
-    
+
     /**
      * Number of lines in source file
-     * 
+     *
      * @var int
      */
     private $sourceLineCount = 0;
-    
-    
+
     /**
      * Index in $sourceLines of current line being parsed
-     * 
+     *
      * @var int
      */
     private $sourceLineIndex = 0;
-    
+
     /**
      *
-     * @var \webignition\RobotsTxt\File\File
+     * @var RobotsTxtFile
      */
     private $file = null;
-    
-    
+
     /**
      * Current state of the parser
-     * 
+     *
      * @var int
      */
     private $currentState = self::STARTING_STATE;
-    
-    
+
     /**
      * Previous state of the parser
-     * 
+     *
      * @var int
      */
     private $previousState = self::STARTING_STATE;
-    
-    
+
     /**
      *
-     * @var \webignition\RobotTxt\Record\Record
+     * @var RobotsTxtRecord
      */
     private $currentRecord = null;
-    
-    
+
     /**
      *
-     * @var \webignition\RobotsTxt\Directive\Factory
+     * @var DirectiveFactory
      */
     private $directiveFactory = null;
-    
+
     /**
      *
      * @var array
@@ -87,82 +87,85 @@ class Parser {
     private $recordlessDirectiveFieldNames = array(
         self::SITEMAP_DIRECTIVE_FIELD_MAME => true
     );
-    
-    
+
     /**
      *
-     * @param string $source 
+     * @param string $source
      */
-    public function setSource($source) {
+    public function setSource($source)
+    {
         $this->source = $this->prepareSource($source);
     }
 
-    
     /**
-     * 
+     *
      * @param string $source
      * @return string
      */
-    private function prepareSource($source) {
+    private function prepareSource($source)
+    {
         $source = trim($source);
-        
+
         if (substr($source, 0, strlen(self::UTF8_BOM)) == self::UTF8_BOM) {
             $source = substr($source, strlen(self::UTF8_BOM));
         }
-        
+
         return $source;
     }
-    
-    
+
     /**
      *
-     * @return \webignition\RobotsTxt\File 
+     * @return RobotsTxtFile
      */
-    public function getFile() {
+    public function getFile()
+    {
         if (is_null($this->file)) {
-            $this->file = new \webignition\RobotsTxt\File\File();
+            $this->file = new RobotsTxtFile();
             $this->parse();
         }
-        
+
         return $this->file;
     }
-    
+
     /**
      *
-     * @return \webignition\RobotsTxt\Directive\Factory
+     * @return DirectiveFactory
      */
-    private function directiveFactory() {
+    private function directiveFactory()
+    {
         if (is_null($this->directiveFactory)) {
-            $this->directiveFactory = new \webignition\RobotsTxt\Directive\Factory();
+            $this->directiveFactory = new DirectiveFactory();
         }
-        
+
         return $this->directiveFactory;
     }
-    
-    private function parse() {        
+
+    private function parse()
+    {
         $this->currentState = self::STARTING_STATE;
         $this->sourceLines = explode("\n", trim($this->source));
         $this->sourceLineCount = count($this->sourceLines);
-        
-        while ($this->sourceLineIndex < $this->sourceLineCount) {            
+
+        while ($this->sourceLineIndex < $this->sourceLineCount) {
             $this->parseCurrentLine();
-        } 
-        
+        }
+
         if ($this->hasCurrentRecord()) {
             $this->file->addRecord($this->currentRecord);
         }
     }
-    
-    private function parseCurrentLine() {                
+
+    private function parseCurrentLine()
+    {
         switch ($this->currentState) {
             case self::STATE_UNKNOWN:
                 $this->deriveStateFromCurrentLine();
                 $this->previousState = self::STATE_UNKNOWN;
                 break;
-            
+
             case self::STATE_STARTING_RECORD:
-                $this->currentRecord = new \webignition\RobotsTxt\Record\Record();
-                $this->currentState = self::STATE_ADDING_TO_RECORD;                
+                $this->currentRecord = new RobotsTxtRecord();
+                $this->currentState = self::STATE_ADDING_TO_RECORD;
                 $this->previousState = self::STATE_STARTING_RECORD;
                 break;
 
@@ -172,127 +175,127 @@ class Parser {
                     $this->previousState = self::STATE_ADDING_TO_RECORD;
                     return;
                 }
-                
+
                 if ($this->isCurrentLineADirective()) {
                     $directive = $this->directiveFactory()->getDirective($this->getCurrentLine());
                     if ($directive->is(self::USER_AGENT_FIELD_NAME)) {
                         $this->currentRecord->userAgentDirectiveList()->add($directive->getValue());
                     } else {
                         $this->currentRecord->directiveList()->add($this->getCurrentLine());
-                    }                                       
+                    }
                 } else {
                     if ($this->isCurrentLineBlank()) {
                         $this->file->addRecord($this->currentRecord);
-                        $this->currentRecord = null; 
+                        $this->currentRecord = null;
                     }
-                    
+
                     $this->currentState = self::STATE_UNKNOWN;
                 }
-                
-                $this->sourceLineIndex++; 
+
+                $this->sourceLineIndex++;
 
                 break;
 
-            case self::STATE_ADDING_TO_FILE:                 
+            case self::STATE_ADDING_TO_FILE:
                 $this->file->directiveList()->add($this->getCurrentLine());
-                $this->currentState = ($this->previousState == self::STATE_ADDING_TO_RECORD) ? self::STATE_ADDING_TO_RECORD : self::STATE_UNKNOWN;
+                $this->currentState = ($this->previousState == self::STATE_ADDING_TO_RECORD)
+                    ? self::STATE_ADDING_TO_RECORD
+                    : self::STATE_UNKNOWN;
                 $this->previousState = self::STATE_ADDING_TO_FILE;
-                $this->sourceLineIndex++;               
-                
+                $this->sourceLineIndex++;
+
                 break;
 
             default:
         }
     }
-    
+
     /**
      *
      * @return string
      */
-    private function getCurrentLine() {
-        return isset($this->sourceLines[$this->sourceLineIndex]) ? trim($this->sourceLines[$this->sourceLineIndex]) : '';
+    private function getCurrentLine()
+    {
+        return isset($this->sourceLines[$this->sourceLineIndex])
+            ? trim($this->sourceLines[$this->sourceLineIndex])
+            : '';
     }
-    
-    
+
     /**
      *
      * @return boolean
      */
-    private function isCurrentLineLastLine() {
-        return $this->sourceLineIndex == $this->sourceLineCount - 1;
-    }
-    
-    
-    /**
-     *
-     * @return boolean
-     */
-    private function hasCurrentRecord() {
+    private function hasCurrentRecord()
+    {
         return !is_null($this->currentRecord);
     }
-    
-    
+
     /**
      *
      * @return boolean
      */
-    private function isCurrentLineBlank() {
+    private function isCurrentLineBlank()
+    {
         return $this->getCurrentLine() == '';
     }
-    
+
     /**
      *
      * @return boolean
      */
-    private function isCurrentLineAComment() {
+    private function isCurrentLineAComment()
+    {
         return substr($this->getCurrentLine(), 0, 1) == self::COMMENT_START_CHARACTER;
-    }    
-    
+    }
+
     /**
      *
-     * @return boolean 
+     * @return boolean
      */
-    private function isCurrentLineADirective() {
+    private function isCurrentLineADirective()
+    {
         if ($this->isCurrentLineBlank()) {
             return false;
         }
-        
+
         if ($this->isCurrentLineAComment()) {
             return false;
         }
-        
+
         return true;
     }
-    
-    
+
     /**
      *
      * @return boolean
      */
-    private function isCurrentLineARecordlessDirective() {
+    private function isCurrentLineARecordlessDirective()
+    {
         if (!$this->isCurrentLineADirective()) {
             return false;
         }
-        
+
         $directive = $this->directiveFactory()->getDirective($this->getCurrentLine());
         return array_key_exists($directive->getField(), $this->recordlessDirectiveFieldNames);
     }
-    
-    
-    private function deriveStateFromCurrentLine() {       
+
+    private function deriveStateFromCurrentLine()
+    {
         if (!$this->isCurrentLineADirective()) {
             $this->sourceLineIndex++;
-            return $this->currentState = self::STATE_UNKNOWN;
+            $this->currentState = self::STATE_UNKNOWN;
+            return null;
         }
-        
-        $directive = new \webignition\RobotsTxt\Directive\Directive();
+
+        $directive = new RobotsTxtDirective();
         $directive->parse($this->getCurrentLine());
-        
+
         if ($directive->is(self::USER_AGENT_FIELD_NAME)) {
-            return $this->currentState = self::STATE_STARTING_RECORD;
+            $this->currentState = self::STATE_STARTING_RECORD;
+            return null;
         }
-        
-        return $this->currentState = self::STATE_ADDING_TO_FILE;
+
+        $this->currentState = self::STATE_ADDING_TO_FILE;
+        return null;
     }
-    
 }
