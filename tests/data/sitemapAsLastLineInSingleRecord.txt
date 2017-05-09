@@ -1,3 +1,0 @@
-User-Agent: *
-Disallow: /cms/
-Sitemap: http://example.com/sitemap.xml
